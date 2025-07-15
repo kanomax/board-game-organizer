@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 Board Game Organizer Designer</title>
+    <meta name="description" content="Design custom 3D printable board game organizers with multi-layer support and auto-fitting">
+    <meta name="keywords" content="board game, organizer, 3D printing, design tool, miniatures">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .viewer {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+        }
+        
+        h1 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .section h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        input[type="number"]:focus, input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .button-secondary {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+        
+        .button-danger {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+        }
+        
+        .compartment-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .compartment-item {
+            padding: 10px;
+            border-bottom: 1px solid #f7fafc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .compartment-item:hover {
+            background: #f7fafc;
+        }
+        
+        .compartment-item.selected {
+            background: #ebf8ff;
+            border-left: 4px solid #667eea;
+        }
+        
+        .compartment-info {
+            font-size: 13px;
+            color: #4a5568;
+        }
+        
+        .delete-btn {
+            background: #f56565;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .controls button {
+            width: auto;
+            margin: 5px;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+        
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .preset-btn {
+            padding: 8px 12px;
+            font-size: 12px;
+            margin: 0;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            font-size: 12px;
+            color: #4a5568;
+        }
+        
+        small {
+            display: block;
+            margin-top: 2px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>🎲 Organizer Designer</h1>
+            
+            <div class="section">
+                <h3>📦 Box Dimensions</h3>
+                <div class="input-group">
+                    <label>Length (mm)</label>
+                    <input type="number" id="boxLength" value="200" min="50" max="500">
+                </div>
+                <div class="input-group">
+                    <label>Width (mm)</label>
+                    <input type="number" id="boxWidth" value="150" min="50" max="500">
+                </div>
+                <div class="input-group">
+                    <label>Height (mm)</label>
+                    <input type="number" id="boxHeight" value="50" min="20" max="200">
+                </div>
+                <div class="input-group">
+                    <label>Wall Thickness (mm)</label>
+                    <input type="number" id="wallThickness" value="2" min="1" max="5" step="0.5">
+                </div>
+                <div class="input-group">
+                    <label>Number of Layers</label>
+                    <input type="number" id="numLayers" value="1" min="1" max="5" onchange="updateLayers()">
+                </div>
+                <div class="input-group">
+                    <label>Layer Separator Thickness (mm)</label>
+                    <input type="number" id="layerSeparatorThickness" value="1" min="0.5" max="3" step="0.5">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>➕ Add Compartment</h3>
+                <div class="input-group">
+                    <label>Type</label>
+                    <select id="compartmentType">
+                        <option value="rectangular">Rectangular</option>
+                        <option value="circular">Circular</option>
+                        <option value="hexagonal">Hexagonal</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Width/Diameter (mm)</label>
+                    <input type="number" id="compWidth" value="40" min="10" max="200">
+                </div>
+                <div class="input-group">
+                    <label>Length (mm)</label>
+                    <input type="number" id="compLength" value="60" min="10" max="200">
+                </div>
+                <div class="input-group">
+                    <label>X Position (mm)</label>
+                    <input type="number" id="compX" value="0" min="-200" max="200">
+                </div>
+                <div class="input-group">
+                    <label>Y Position (mm)</label>
+                    <input type="number" id="compY" value="0" min="-200" max="200">
+                </div>
+                <div class="input-group">
+                    <label>Layer</label>
+                    <select id="compLayer">
+                        <option value="1">Layer 1 (Bottom)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="hasBase" onchange="toggleBaseOptions()"> Add Miniature Base
+                    </label>
+                </div>
+                <div id="baseOptions" style="display: none; margin-left: 20px; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                    <div class="input-group">
+                        <label>Base Height (mm)</label>
+                        <input type="number" id="baseHeight" value="3" min="1" max="10" step="0.5">
+                    </div>
+                    <div class="input-group">
+                        <label>Base Inset (mm)</label>
+                        <input type="number" id="baseInset" value="2" min="0" max="10" step="0.5">
+                        <small>Distance from compartment walls</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Base Type</label>
+                        <select id="baseType">
+                            <option value="match">Match Compartment</option>
+                            <option value="round25">25mm Round</option>
+                            <option value="round32">32mm Round</option>
+                            <option value="round40">40mm Round</option>
+                            <option value="round50">50mm Round</option>
+                            <option value="square20">20mm Square</option>
+                            <option value="square25">25mm Square</option>
+                            <option value="square32">32mm Square</option>
+                            <option value="custom">Custom Size</option>
+                        </select>
+                    </div>
+                    <div id="customBaseOptions" style="display: none;">
+                        <div class="input-group">
+                            <label>Custom Base Width (mm)</label>
+                            <input type="number" id="customBaseWidth" value="25" min="5" max="100">
+                        </div>
+                        <div class="input-group">
+                            <label>Custom Base Length (mm)</label>
+                            <input type="number" id="customBaseLength" value="25" min="5" max="100">
+                        </div>
+                    </div>
+                </div>
+                <button onclick="addCompartment()">Add Compartment</button>
+            </div>
+            
+            <div class="section">
+                <h3>🎯 Quick Presets</h3>
+                <div class="preset-grid">
+                    <button class="preset-btn" onclick="addPreset('cards')">Card Deck</button>
+                    <button class="preset-btn" onclick="addPreset('tokens')">Token Tray</button>
+                    <button class="preset-btn" onclick="addPreset('dice')">Dice Set</button>
+                    <button class="preset-btn" onclick="addPreset('meeples')">Meeples</button>
+                    <button class="preset-btn" onclick="addPreset('mini25')">25mm Mini</button>
+                    <button class="preset-btn" onclick="addPreset('mini32')">32mm Mini</button>
+                    <button class="preset-btn" onclick="addPreset('mini40')">40mm Mini</button>
+                    <button class="preset-btn" onclick="addPreset('hero')">Hero Mini</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📋 Compartments</h3>
+                <div class="compartment-list" id="compartmentList">
+                    <div style="padding: 20px; text-align: center; color: #a0aec0; font-size: 14px;">
+                        No compartments added yet
+                    </div>
+                </div>
+                <button class="button-secondary" onclick="autoFitCompartments()" style="margin-top: 10px;">
+                    🎯 Auto-Fit All Compartments
+                </button>
+                <button class="button-secondary" onclick="autoFitCurrentLayer()" style="margin-top: 5px;">
+                    📋 Auto-Fit Current Layer
+                </button>
+            </div>
+            
+            <div class="section">
+                <h3>💾 Export Options</h3>
+                <button class="button-secondary" onclick="exportDesign()">Export JSON</button>
+                <button class="button-secondary" onclick="exportOpenSCAD()">Export OpenSCAD</button>
+                <button class="button-secondary" onclick="exportTinkercad()">Export Tinkercad Code</button>
+                <button class="button-secondary" onclick="exportFusion360()">Export Fusion 360 Script</button>
+                <button class="button-danger" onclick="clearAll()">Clear All</button>
+            </div>
+        </div>
+        
+        <div class="viewer">
+            <div id="canvas-container"></div>
+            <div class="controls">
+                <button onclick="resetView()">Reset View</button>
+                <button onclick="toggleWireframe()">Wireframe</button>
+                <button onclick="toggleLayerView()">Toggle Layers</button>
+            </div>
+            <div class="stats" id="stats">
+                Compartments: 0 | Layers: 1 | Volume: 0 cm³
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer;
+        let boxMesh, compartments = [];
+        let selectedCompartment = null;
+        let wireframeMode = false;
+        let layerSeparators = [];
+        let showAllLayers = true;
+        
+        // Initialize the 3D scene
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(200, 150, 200);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(100, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // Grid helper
+            const gridHelper = new THREE.GridHelper(400, 40, 0x444444, 0x444444);
+            scene.add(gridHelper);
+            
+            // Mouse controls
+            let mouseDown = false;
+            let mouseX = 0, mouseY = 0;
+            
+            container.addEventListener('mousedown', (e) => {
+                mouseDown = true;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+            
+            container.addEventListener('mouseup', () => mouseDown = false);
+            
+            container.addEventListener('mousemove', (e) => {
+                if (mouseDown) {
+                    const deltaX = e.clientX - mouseX;
+                    const deltaY = e.clientY - mouseY;
+                    
+                    camera.position.x = camera.position.x * Math.cos(deltaX * 0.01) - camera.position.z * Math.sin(deltaX * 0.01);
+                    camera.position.z = camera.position.x * Math.sin(deltaX * 0.01) + camera.position.z * Math.cos(deltaX * 0.01);
+                    camera.position.y += deltaY * 0.5;
+                    
+                    camera.lookAt(0, 0, 0);
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                }
+            });
+            
+            container.addEventListener('wheel', (e) => {
+                const scale = e.deltaY > 0 ? 1.1 : 0.9;
+                camera.position.multiplyScalar(scale);
+                camera.lookAt(0, 0, 0);
+            });
+            
+            // Event listeners
+            ['boxLength', 'boxWidth', 'boxHeight', 'wallThickness', 'numLayers', 'layerSeparatorThickness'].forEach(id => {
+                document.getElementById(id).addEventListener('input', createBox);
+            });
+            
+            // Base type change listener
+            document.getElementById('baseType').addEventListener('change', function() {
+                toggleCustomBaseOptions(this.value === 'custom');
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+            
+            // Initial box creation
+            createBox();
+            
+            // Start render loop
+            animate();
+        }
+        
+        function updateLayers() {
+            const numLayers = parseInt(document.getElementById('numLayers').value);
+            const layerSelect = document.getElementById('compLayer');
+            
+            layerSelect.innerHTML = '';
+            
+            for (let i = 1; i <= numLayers; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Layer ${i} ${i === 1 ? '(Bottom)' : i === numLayers ? '(Top)' : ''}`;
+                layerSelect.appendChild(option);
+            }
+            
+            createBox();
+        }
+        
+        function getLayerHeight(layer) {
+            const totalHeight = parseFloat(document.getElementById('boxHeight').value);
+            const wallThickness = parseFloat(document.getElementById('wallThickness').value);
+            const numLayers = parseInt(document.getElementById('numLayers').value);
+            const separatorThickness = parseFloat(document.getElementById('layerSeparatorThickness').value);
+            
+            const availableHeight = totalHeight - wallThickness;
+            const separatorSpace = (numLayers - 1) * separatorThickness;
+            const layerHeight = (availableHeight - separatorSpace) / numLayers;
+            
+            return {
+                height: layerHeight,
+                bottomY: wallThickness + (layer - 1) * (layerHeight + separatorThickness)
+            };
+        }
+        
+        function toggleBaseOptions() {
+            const hasBase = document.getElementById('hasBase').checked;
+            const baseOptions = document.getElementById('baseOptions');
+            baseOptions.style.display = hasBase ? 'block' : 'none';
+            
+            const baseType = document.getElementById('baseType').value;
+            toggleCustomBaseOptions(baseType === 'custom');
+        }
+        
+        function toggleCustomBaseOptions(show) {
+            const customOptions = document.getElementById('customBaseOptions');
+            customOptions.style.display = show ? 'block' : 'none';
+        }
+        
+        function createBox() {
+            if (boxMesh) scene.remove(boxMesh);
+            
+            layerSeparators.forEach(separator => scene.remove(separator));
+            layerSeparators = [];
+            
+            const length = parseFloat(document.getElementById('boxLength').value);
+            const width = parseFloat(document.getElementById('boxWidth').value);
+            const height = parseFloat(document.getElementById('boxHeight').value);
+            const thickness = parseFloat(document.getElementById('wallThickness').value);
+            const numLayers = parseInt(document.getElementById('numLayers').value);
+            const separatorThickness = parseFloat(document.getElementById('layerSeparatorThickness').value);
+            
+            const boxGroup = new THREE.Group();
+            
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0x8e9aaf, 
+                transparent: true, 
+                opacity: 0.7 
+            });
+            
+            // Bottom
+            const bottomGeometry = new THREE.BoxGeometry(length, thickness, width);
+            const bottom = new THREE.Mesh(bottomGeometry, material);
+            bottom.position.y = thickness / 2;
+            boxGroup.add(bottom);
+            
+            // Walls
+            const wallMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x9ca3af, 
+                transparent: true, 
+                opacity: 0.5 
+            });
+            
+            // Front wall
+            const frontWall = new THREE.Mesh(
+                new THREE.BoxGeometry(length, height, thickness),
+                wallMaterial
+            );
+            frontWall.position.set(0, height/2 + thickness, width/2 - thickness/2);
+            boxGroup.add(frontWall);
+            
+            // Back wall
+            const backWall = new THREE.Mesh(
+                new THREE.BoxGeometry(length, height, thickness),
+                wallMaterial
+            );
+            backWall.position.set(0, height/2 + thickness, -width/2 + thickness/2);
+            boxGroup.add(backWall);
+            
+            // Left wall
+            const leftWall = new THREE.Mesh(
+                new THREE.BoxGeometry(thickness, height, width),
+                wallMaterial
+            );
+            leftWall.position.set(-length/2 + thickness/2, height/2 + thickness, 0);
+            boxGroup.add(leftWall);
+            
+            // Right wall
+            const rightWall = new THREE.Mesh(
+                new THREE.BoxGeometry(thickness, height, width),
+                wallMaterial
+            );
+            rightWall.position.set(length/2 - thickness/2, height/2 + thickness, 0);
+            boxGroup.add(rightWall);
+            
+            // Add layer separators
+            if (numLayers > 1) {
+                const separatorMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x6b7280, 
+                    transparent: true, 
+                    opacity: 0.8 
+                });
+                
+                for (let i = 1; i < numLayers; i++) {
+                    const layerInfo = getLayerHeight(i);
+                    const separatorY = layerInfo.bottomY + layerInfo.height;
+                    
+                    const separatorGeometry = new THREE.BoxGeometry(
+                        length - 2 * thickness, 
+                        separatorThickness, 
+                        width - 2 * thickness
+                    );
+                    const separator = new THREE.Mesh(separatorGeometry, separatorMaterial);
+                    separator.position.set(0, separatorY + separatorThickness/2, 0);
+                    separator.userData = { isLayerSeparator: true, layer: i };
+                    
+                    layerSeparators.push(separator);
+                    scene.add(separator);
+                }
+            }
+            
+            boxMesh = boxGroup;
+            scene.add(boxMesh);
+            updateStats();
+        }
+        
+        function getBaseGeometry(baseType, compWidth, compLength, inset) {
+            switch(baseType) {
+                case 'round25':
+                    return { type: 'circular', radius: 12.5, width: 25, length: 25 };
+                case 'round32':
+                    return { type: 'circular', radius: 16, width: 32, length: 32 };
+                case 'round40':
+                    return { type: 'circular', radius: 20, width: 40, length: 40 };
+                case 'round50':
+                    return { type: 'circular', radius: 25, width: 50, length: 50 };
+                case 'square20':
+                    return { type: 'rectangular', width: 20, length: 20 };
+                case 'square25':
+                    return { type: 'rectangular', width: 25, length: 25 };
+                case 'square32':
+                    return { type: 'rectangular', width: 32, length: 32 };
+                case 'custom':
+                    const customWidth = parseFloat(document.getElementById('customBaseWidth').value);
+                    const customLength = parseFloat(document.getElementById('customBaseLength').value);
+                    return { type: 'rectangular', width: customWidth, length: customLength };
+                case 'match':
+                default:
+                    return { 
+                        type: 'rectangular', 
+                        width: compWidth - (2 * inset), 
+                        length: compLength - (2 * inset) 
+                    };
+            }
+        }
+        
+        function addCompartment() {
+            const type = document.getElementById('compartmentType').value;
+            const width = parseFloat(document.getElementById('compWidth').value);
+            const length = parseFloat(document.getElementById('compLength').value);
+            const x = parseFloat(document.getElementById('compX').value);
+            const y = parseFloat(document.getElementById('compY').value);
+            const layer = parseInt(document.getElementById('compLayer').value);
+            
+            const layerInfo = getLayerHeight(layer);
+            const compartmentHeight = layerInfo.height - 5;
+            
+            const hasBase = document.getElementById('hasBase').checked;
+            const baseHeight = parseFloat(document.getElementById('baseHeight').value);
+            const baseInset = parseFloat(document.getElementById('baseInset').value);
+            const baseType = document.getElementById('baseType').value;
+            
+            let geometry;
+            const material = new THREE.MeshLambertMaterial({ 
+                color: Math.random() * 0xffffff,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            switch(type) {
+                case 'rectangular':
+                    geometry = new THREE.BoxGeometry(width, compartmentHeight, length);
+                    break;
+                case 'circular':
+                    geometry = new THREE.CylinderGeometry(width/2, width/2, compartmentHeight, 16);
+                    break;
+                case 'hexagonal':
+                    geometry = new THREE.CylinderGeometry(width/2, width/2, compartmentHeight, 6);
+                    break;
+            }
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            const compartmentY = layerInfo.bottomY + compartmentHeight/2;
+            mesh.position.set(x, compartmentY, y);
+            mesh.castShadow = true;
+            
+            const compartmentGroup = new THREE.Group();
+            compartmentGroup.add(mesh);
+            
+            let baseMesh = null;
+            if (hasBase) {
+                const baseData = getBaseGeometry(baseType, width, length, baseInset);
+                const baseMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x8B4513,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                let baseGeometry;
+                if (baseData.type === 'circular') {
+                    baseGeometry = new THREE.CylinderGeometry(baseData.radius, baseData.radius, baseHeight, 16);
+                } else {
+                    baseGeometry = new THREE.BoxGeometry(baseData.width, baseHeight, baseData.length);
+                }
+                
+                baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
+                baseMesh.position.set(x, layerInfo.bottomY + baseHeight/2, y);
+                baseMesh.castShadow = true;
+                compartmentGroup.add(baseMesh);
+            }
+            
+            const compartment = {
+                id: Date.now(),
+                type,
+                width,
+                length,
+                height: compartmentHeight,
+                x,
+                y,
+                layer,
+                mesh,
+                group: compartmentGroup,
+                hasBase,
+                baseHeight: hasBase ? baseHeight : 0,
+                baseInset: hasBase ? baseInset : 0,
+                baseType: hasBase ? baseType : null,
+                baseMesh
+            };
+            
+            compartments.push(compartment);
+            scene.add(compartmentGroup);
+            updateCompartmentList();
+            updateStats();
+        }
+        
+        function addPreset(type) {
+            const presets = {
+                cards: { type: 'rectangular', width: 65, length: 90, name: 'Card Slot', hasBase: false },
+                tokens: { type: 'circular', width: 25, length: 25, name: 'Token', hasBase: false },
+                dice: { type: 'rectangular', width: 20, length: 20, name: 'Die', hasBase: false },
+                meeples: { type: 'hexagonal', width: 15, length: 15, name: 'Meeple', hasBase: false },
+                mini25: { type: 'circular', width: 35, length: 35, name: '25mm Mini', hasBase: true, baseType: 'round25' },
+                mini32: { type: 'circular', width: 40, length: 40, name: '32mm Mini', hasBase: true, baseType: 'round32' },
+                mini40: { type: 'circular', width: 50, length: 50, name: '40mm Mini', hasBase: true, baseType: 'round40' },
+                hero: { type: 'rectangular', width: 55, length: 55, name: 'Hero Mini', hasBase: true, baseType: 'round50' }
+            };
+            
+            const preset = presets[type];
+            if (preset) {
+                document.getElementById('compartmentType').value = preset.type;
+                document.getElementById('compWidth').value = preset.width;
+                document.getElementById('compLength').value = preset.length;
+                document.getElementById('hasBase').checked = preset.hasBase;
+                
+                if (preset.hasBase) {
+                    document.getElementById('baseType').value = preset.baseType;
+                    toggleBaseOptions();
+                }
+                
+                addCompartment();
+            }
+        }
+        
+        function updateCompartmentList() {
+            const list = document.getElementById('compartmentList');
+            
+            if (compartments.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: #a0aec0; font-size: 14px;">No compartments added yet</div>';
+                return;
+            }
+            
+            list.innerHTML = compartments.map((comp, index) => `
+                <div class="compartment-item" onclick="selectCompartment(${comp.id})">
+                    <div class="compartment-info">
+                        <strong>${comp.type} ${index + 1}</strong>${comp.hasBase ? ' 🏗️' : ''} 📋 L${comp.layer}<br>
+                        ${comp.width}×${comp.length}mm at (${comp.x}, ${comp.y})
+                        ${comp.hasBase ? `<br><small style="color: #8B4513;">Base: ${comp.baseHeight}mm ${comp.baseType}</small>` : ''}
+                    </div>
+                    <button class="delete-btn" onclick="removeCompartment(${comp.id}); event.stopPropagation();">×</button>
+                </div>
+            `).join('');
+        }
+        
+        function selectCompartment(id) {
+            compartments.forEach(comp => {
+                comp.mesh.material.emissive.setHex(0x000000);
+                if (comp.baseMesh) {
+                    comp.baseMesh.material.emissive.setHex(0x000000);
+                }
+            });
+            
+            const comp = compartments.find(c => c.id === id);
+            if (comp) {
+                comp.mesh.material.emissive.setHex(0x444444);
+                if (comp.baseMesh) {
+                    comp.baseMesh.material.emissive.setHex(0x222222);
+                }
+                selectedCompartment = comp;
+            }
+            
+            updateCompartmentList();
+        }
+        
+        function removeCompartment(id) {
+            const index = compartments.findIndex(c => c.id === id);
+            if (index > -1) {
+                const comp = compartments[index];
+                scene.remove(comp.group || comp.mesh);
+                compartments.splice(index, 1);
+                updateCompartmentList();
+                updateStats();
+            }
+        }
+        
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all compartments?')) {
+                compartments.forEach(comp => scene.remove(comp.group || comp.mesh));
+                compartments = [];
+                selectedCompartment = null;
+                updateCompartmentList();
+                updateStats();
+            }
+        }
+        
+        function resetView() {
+            camera.position.set(200, 150, 200);
+            camera.lookAt(0, 0, 0);
+        }
+        
+        function toggleLayerView() {
+            showAllLayers = !showAllLayers;
+            
+            if (showAllLayers) {
+                compartments.forEach(comp => {
+                    comp.group.visible = true;
+                });
+                layerSeparators.forEach(separator => {
+                    separator.visible = true;
+                });
+            } else {
+                const currentLayer = parseInt(document.getElementById('compLayer').value);
+                compartments.forEach(comp => {
+                    comp.group.visible = comp.layer === currentLayer;
+                });
+                layerSeparators.forEach(separator => {
+                    separator.visible = false;
+                });
+            }
+        }
+        
+        function toggleWireframe() {
+            wireframeMode = !wireframeMode;
+            
+            if (boxMesh) {
+                boxMesh.children.forEach(child => {
+                    child.material.wireframe = wireframeMode;
+                });
+            }
+            
+            compartments.forEach(comp => {
+                comp.mesh.material.wireframe = wireframeMode;
+                if (comp.baseMesh) {
+                    comp.baseMesh.material.wireframe = wireframeMode;
+                }
+            });
+            
+            layerSeparators.forEach(separator => {
+                separator.material.wireframe = wireframeMode;
+            });
+        }
+        
+        function updateStats() {
+            const boxLength = parseFloat(document.getElementById('boxLength').value);
+            const boxWidth = parseFloat(document.getElementById('boxWidth').value);
+            const boxHeight = parseFloat(document.getElementById('boxHeight').value);
+            const numLayers = parseInt(document.getElementById('numLayers').value);
+            
+            const volume = (boxLength * boxWidth * boxHeight) / 1000;
+            
+            document.getElementById('stats').textContent = 
+                `Compartments: ${compartments.length} | Layers: ${numLayers} | Box Volume: ${volume.toFixed(1)} cm³`;
+        }
+        
+        // Auto-fit functions
+        function autoFitCompartments() {
+            if (compartments.length === 0) {
+                alert('No compartments to fit! Please add some compartments first.');
+                return;
+            }
+            
+            const numLayers = parseInt(document.getElementById('numLayers').value);
+            
+            const compartmentsByLayer = {};
+            for (let i = 1; i <= numLayers; i++) {
+                compartmentsByLayer[i] = compartments.filter(comp => comp.layer === i);
+            }
+            
+            for (let layer = 1; layer <= numLayers; layer++) {
+                if (compartmentsByLayer[layer].length > 0) {
+                    fitCompartmentsToLayer(compartmentsByLayer[layer], layer);
+                }
+            }
+            
+            updateCompartmentList();
+            alert(`Auto-fitted ${compartments.length} compartments across ${numLayers} layer(s)!`);
+        }
+        
+        function autoFitCurrentLayer() {
+            const currentLayer = parseInt(document.getElementById('compLayer').value);
+            const layerCompartments = compartments.filter(comp => comp.layer === currentLayer);
+            
+            if (layerCompartments.length === 0) {
+                alert(`No compartments in Layer ${currentLayer} to fit!`);
+                return;
+            }
+            
+            fitCompartmentsToLayer(layerCompartments, currentLayer);
+            updateCompartmentList();
+            alert(`Auto-fitted ${layerCompartments.length} compartments in Layer ${currentLayer}!`);
+        }
+        
+        function fitCompartmentsToLayer(layerCompartments, layer) {
+            const boxLength = parseFloat(document.getElementById('boxLength').value);
+            const boxWidth = parseFloat(document.getElementById('boxWidth').value);
+            const wallThickness = parseFloat(document.getElementById('wallThickness').value);
+            
+            const availableLength = boxLength - (2 * wallThickness);
+            const availableWidth = boxWidth - (2 * wallThickness);
+            
+            const padding = 5;
+            let currentX = 0;
+            let currentY = 0;
+            let rowHeight = 0;
+            
+            layerCompartments.forEach(comp => {
+                const compWidth = comp.width + padding;
+                const compLength = comp.length + padding;
+                
+                if (currentX + compWidth > availableLength) {
+                    currentX = 0;
+                    currentY += rowHeight + padding;
+                    rowHeight = 0;
+                }
+                
+                comp.x = currentX - (boxLength / 2) + (comp.width / 2) + wallThickness;
+                comp.y = currentY - (boxWidth / 2) + (comp.length / 2) + wallThickness;
+                
+                const layerInfo = getLayerHeight(layer);
+                const compartmentY = layerInfo.bottomY + comp.height/2;
+                comp.mesh.position.set(comp.x, compartmentY, comp.y);
+                
+                if (comp.baseMesh) {
+                    comp.baseMesh.position.set(comp.x, layerInfo.bottomY + comp.baseHeight/2, comp.y);
+                }
+                
+                currentX += compWidth;
+                rowHeight = Math.max(rowHeight, compLength);
+            });
+        }
+        
+        // Export functions
+        function getBaseDataForExport(comp) {
+            switch(comp.baseType) {
+                case 'round25': return { width: 25, length: 25, isCircular: true };
+                case 'round32': return { width: 32, length: 32, isCircular: true };
+                case 'round40': return { width: 40, length: 40, isCircular: true };
+                case 'round50': return { width: 50, length: 50, isCircular: true };
+                case 'square20': return { width: 20, length: 20, isCircular: false };
+                case 'square25': return { width: 25, length: 25, isCircular: false };
+                case 'square32': return { width: 32, length: 32, isCircular: false };
+                case 'custom':
+                    const customWidth = document.getElementById('customBaseWidth') ? 
+                        parseFloat(document.getElementById('customBaseWidth').value) : 25;
+                    const customLength = document.getElementById('customBaseLength') ? 
+                        parseFloat(document.getElementById('customBaseLength').value) : 25;
+                    return { width: customWidth, length: customLength, isCircular: false };
+                case 'match':
+                default:
+                    return { 
+                        width: comp.width - (2 * comp.baseInset), 
+                        length: comp.length - (2 * comp.baseInset), 
+                        isCircular: false 
+                    };
+            }
+        }
+        
+        function exportDesign() {
+            const boxLength = parseFloat(document.getElementById('boxLength').value);
+            const boxWidth = parseFloat(document.getElementById('boxWidth').value);
+            const boxHeight = parseFloat(document.getElementById('boxHeight').value);
+            const wallThickness = parseFloat(document.getElementById('wallThickness').value);
+            const numLayers = parseInt(document.getElementById('numLayers').value);
+            const layerSeparatorThickness = parseFloat(document.getElementById('layerSeparatorThickness').value);
+            
+            const exportData = {
+                box: { 
+                    length: boxLength, 
+                    width: boxWidth, 
+                    height: boxHeight, 
+                    wallThickness,
+                    numLayers,
+                    layerSeparatorThickness
+                },
+                compartments: compartments.map(comp => ({
+                    type: comp.type,
+                    width: comp.width,
+                    length: comp.length,
+                    height: comp.height,
+                    x: comp.x,
+                    y: comp.y,
+                    layer: comp.layer,
+                    hasBase: comp.hasBase,
+                    baseHeight: comp.baseHeight,
+                    baseInset: comp.baseInset,
+                    baseType: comp.baseType
+                }))
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            downloadFile(dataStr, 'organizer_design.json', 'application/json');
+            
+            alert('JSON design exported! Use this with CAD software to create STEP files.');
+        }
+        
+        function exportOpenSCAD() {
+            const boxLength = parseFloat(document.getElementById('boxLength').value);
+            const boxWidth = parseFloat(document.getElementById('boxWidth').value);
+            const boxHeight = parseFloat(document.getElementById('boxHeight').value);
+            const wallThickness = parseFloat(document.getElementById('wallThickness').value);
+            
+            let scadCode = `// Board Game Organizer - Generated by Organizer Designer
+// Dimensions in millimeters
+
+// Box parameters
+box_length = ${boxLength};
+box_width = ${boxWidth};
+box_height = ${boxHeight};
+wall_thickness = ${wallThickness};
+
+module organizer_box() {
+    difference() {
+        // Outer box
+        cube([box_length, box_width, box_height]);
+        
+        // Inner cavity
+        translate([wall_thickness, wall_thickness, wall_thickness])
+            cube([box_length - 2*wall_thickness, box_width - 2*wall_thickness, box_height]);
+        
+        // Compartment cutouts
+`;
+
+            compartments.forEach((comp, index) => {
+                const centerX = comp.x + boxLength/2;
+                const centerY = comp.y + boxWidth/2;
+                const layerInfo = getLayerHeight(comp.layer);
+                
+                scadCode += `        
+        // Compartment ${index + 1} (${comp.type}) - Layer ${comp.layer}
+        translate([${centerX - comp.width/2}, ${centerY - comp.length/2}, ${layerInfo.bottomY}])`;
+                
+                if (comp.type === 'rectangular') {
+                    scadCode += `
+            cube([${comp.width}, ${comp.length}, ${comp.height}]);`;
+                } else if (comp.type === 'circular') {
+                    scadCode += `
+            cylinder(h=${comp.height}, r=${comp.width/2}, $fn=32);`;
+                } else if (comp.type === 'hexagonal') {
+                    scadCode += `
+            cylinder(h=${comp.height}, r=${comp.width/2}, $fn=6);`;
+                }
+                
+                if (comp.hasBase) {
+                    const baseData = getBaseDataForExport(comp);
+                    scadCode += `
+        
+        // Base for Compartment ${index + 1}
+        translate([${centerX - baseData.width/2}, ${centerY - baseData.length/2}, ${layerInfo.bottomY}])`;
+                    
+                    if (baseData.isCircular) {
+                        scadCode += `
+            cylinder(h=${comp.baseHeight}, r=${baseData.width/2}, $fn=32);`;
+                    } else {
+                        scadCode += `
+            cube([${baseData.width}, ${baseData.length}, ${comp.baseHeight}]);`;
+                    }
+                }
+            });
+
+            scadCode += `
+    }
+}
+
+// Generate bases separately for easier printing
+module bases() {`;
+
+            compartments.forEach((comp, index) => {
+                if (comp.hasBase) {
+                    const baseData = getBaseDataForExport(comp);
+                    const centerX = comp.x + boxLength/2;
+                    const centerY = comp.y + boxWidth/2;
+                    
+                    scadCode += `
+    // Base ${index + 1}
+    translate([${centerX - baseData.width/2}, ${centerY - baseData.length/2}, 0])`;
+                    
+                    if (baseData.isCircular) {
+                        scadCode += `
+        cylinder(h=${comp.baseHeight}, r=${baseData.width/2}, $fn=32);`;
+                    } else {
+                        scadCode += `
+        cube([${baseData.width}, ${baseData.length}, ${comp.baseHeight}]);`;
+                    }
+                }
+            });
+
+            scadCode += `
+}
+
+// Generate the organizer
+organizer_box();
+
+// Uncomment to generate bases separately (place beside organizer for printing)
+// translate([box_length + 10, 0, 0]) bases();
+
+// Uncomment to see a cross-section view
+// translate([0, -box_width/2, 0]) organizer_box();`;
+
+            downloadFile(scadCode, 'organizer.scad', 'text/plain');
+            alert('OpenSCAD file exported! Open in OpenSCAD, then export as STL. You can then convert STL to STEP using FreeCAD or Fusion 360.');
+        }
+        
+        function exportTinkercad() {
+            const boxLength = parseFloat(document.getElementById('boxLength').value);
+            const boxWidth = parseFloat(document.getElementById('boxWidth').value);
+            const boxHeight = parseFloat(document.getElementById('boxHeight').value);
+            const wallThickness = parseFloat(document.getElementById('wallThickness').value);
+            
+            let instructions = `Tinkercad Recreation Instructions:
+
+1. Create main box:
+   - Add a Box: ${boxLength} × ${boxWidth} × ${boxHeight} mm
+   - Position at (0, 0, 0)
+
+2. Create inner cavity:
+   - Add a Box: ${boxLength - 2*wallThickness} × ${boxWidth - 2*wallThickness} × ${boxHeight - wallThickness} mm
+   - Position at (0, 0, ${wallThickness}) mm
+   - Make it a "Hole" (subtract)
+
+3. Add compartments (make all "Holes"):
+`;
+
+            compartments.forEach((comp, index) => {
+                const layerInfo = getLayerHeight(comp.layer);
+                instructions += `
+   Compartment ${index + 1} (${comp.type}) - Layer ${comp.layer}:`;
+                
+                if (comp.type === 'rectangular') {
+                    instructions += `
+   - Add Box: ${comp.width} × ${comp.length} × ${comp.height} mm
+   - Position at (${comp.x}, ${comp.y}, ${layerInfo.bottomY}) mm
+   - Make it a "Hole"`;
+                } else if (comp.type === 'circular') {
+                    instructions += `
+   - Add Cylinder: Diameter ${comp.width} mm, Height ${comp.height} mm
+   - Position at (${comp.x}, ${comp.y}, ${layerInfo.bottomY}) mm
+   - Make it a "Hole"`;
+                } else if (comp.type === 'hexagonal') {
+                    instructions += `
+   - Add Cylinder: Diameter ${comp.width} mm, Height ${comp.height} mm, 6 sides
+   - Position at (${comp.x}, ${comp.y}, ${layerInfo.bottomY}) mm
+   - Make it a "Hole"`;
+                }
+                
+                if (comp.hasBase) {
+                    const baseData = getBaseDataForExport(comp);
+                    instructions += `
+   
+   Base for Compartment ${index + 1}:`;
+                    if (baseData.isCircular) {
+                        instructions += `
+   - Add Cylinder: Diameter ${baseData.width} mm, Height ${comp.baseHeight} mm
+   - Position at (${comp.x}, ${comp.y}, ${layerInfo.bottomY}) mm
+   - Keep as solid (not a hole)`;
+                    } else {
+                        instructions += `
+   - Add Box: ${baseData.width} × ${baseData.length} × ${comp.baseHeight} mm
+   - Position at (${comp.x}, ${comp.y}, ${layerInfo.bottomY}) mm
+   - Keep as solid (not a hole)`;
+                    }
+                }
+            });
+
+            instructions += `
+
+4. Group all shapes together
+5. Export as STL
+6. Import STL into Fusion 360 and convert to STEP format
+
+Note: Tinkercad coordinates may need adjustment. Use these as reference dimensions.`;
+
+            downloadFile(instructions, 'tinkercad_instructions.txt', 'text/plain');
+            alert('Tinkercad instructions exported! Follow the steps to recreate in Tinkercad, then export to Fusion 360 for STEP conversion.');
+        }
+        
+        function exportFusion360() {
+            const boxLength = parseFloat(document.getElementById('boxLength').value);
+            const boxWidth = parseFloat(document.getElementById('boxWidth').value);
+            const boxHeight = parseFloat(document.getElementById('boxHeight').value);
+            const wallThickness = parseFloat(document.getElementById('wallThickness').value);
+            
+            let script = `# Fusion 360 Python Script for Board Game Organizer
+# Run this in Fusion 360's Scripts and Add-ins
+
+import adsk.core, adsk.fusion, traceback
+
+def run(context):
+    try:
+        app = adsk.core.Application.get()
+        design = app.activeProduct
+        rootComp = design.rootComponent
+        
+        # Create new sketch on XY plane
+        sketches = rootComp.sketches
+        xyPlane = rootComp.xYConstructionPlane
+        sketch = sketches.add(xyPlane)
+        
+        # Box dimensions (in cm for Fusion 360)
+        boxLength = ${boxLength/10}  # Convert mm to cm
+        boxWidth = ${boxWidth/10}
+        boxHeight = ${boxHeight/10}
+        wallThickness = ${wallThickness/10}
+        
+        # Create outer rectangle
+        outerRect = sketch.sketchCurves.sketchLines.addTwoPointRectangle(
+            adsk.core.Point3D.create(-boxLength/2, -boxWidth/2, 0),
+            adsk.core.Point3D.create(boxLength/2, boxWidth/2, 0)
+        )
+        
+        # Create inner rectangle (offset by wall thickness)
+        innerRect = sketch.sketchCurves.sketchLines.addTwoPointRectangle(
+            adsk.core.Point3D.create(-boxLength/2 + wallThickness, -boxWidth/2 + wallThickness, 0),
+            adsk.core.Point3D.create(boxLength/2 - wallThickness, boxWidth/2 - wallThickness, 0)
+        )
+        
+        # Extrude the box
+        prof = sketch.profiles.item(0)  # Outer profile
+        extrudes = rootComp.features.extrudeFeatures
+        extInput = extrudes.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+        extInput.setDistanceExtent(False, adsk.core.ValueInput.createByReal(boxHeight))
+        boxExtrude = extrudes.add(extInput)
+        
+        # Cut out inner cavity
+        innerProf = sketch.profiles.item(1)  # Inner profile
+        cutInput = extrudes.createInput(innerProf, adsk.fusion.FeatureOperations.CutFeatureOperation)
+        cutInput.setDistanceExtent(False, adsk.core.ValueInput.createByReal(boxHeight - wallThickness))
+        cutInput.startExtent = adsk.fusion.OffsetStartDefinition.create(adsk.core.ValueInput.createByReal(wallThickness))
+        extrudes.add(cutInput)
+        
+        # Add compartments`;
+
+            compartments.forEach((comp, index) => {
+                const centerX = comp.x / 10;
+                const centerY = comp.y / 10;
+                const width = comp.width / 10;
+                const length = comp.length / 10;
+                const height = comp.height / 10;
+                const layerInfo = getLayerHeight(comp.layer);
+                
+                script += `
+        
+        # Compartment ${index + 1} (${comp.type}) - Layer ${comp.layer}
+        compSketch${index} = sketches.add(xyPlane)`;
+                
+                if (comp.type === 'rectangular') {
+                    script += `
+        compRect${index} = compSketch${index}.sketchCurves.sketchLines.addTwoPointRectangle(
+            adsk.core.Point3D.create(${centerX - width/2}, ${centerY - length/2}, 0),
+            adsk.core.Point3D.create(${centerX + width/2}, ${centerY + length/2}, 0)
+        )`;
+                } else {
+                    script += `
+        compCircle${index} = compSketch${index}.sketchCurves.sketchCircles.addByCenterRadius(
+            adsk.core.Point3D.create(${centerX}, ${centerY}, 0), ${width/2}
+        )`;
+                }
+                
+                script += `
+        compProf${index} = compSketch${index}.profiles.item(0)
+        compCutInput${index} = extrudes.createInput(compProf${index}, adsk.fusion.FeatureOperations.CutFeatureOperation)
+        compCutInput${index}.setDistanceExtent(False, adsk.core.ValueInput.createByReal(${height}))
+        compCutInput${index}.startExtent = adsk.fusion.OffsetStartDefinition.create(adsk.core.ValueInput.createByReal(${layerInfo.bottomY/10}))
+        extrudes.add(compCutInput${index})`;
+                
+                if (comp.hasBase) {
+                    const baseData = getBaseDataForExport(comp);
+                    const baseHeight = comp.baseHeight / 10;
+                    const baseWidth = baseData.width / 10;
+                    const baseLength = baseData.length / 10;
+                    
+                    script += `
+        
+        # Base for Compartment ${index + 1}
+        baseSketch${index} = sketches.add(xyPlane)`;
+                    
+                    if (baseData.isCircular) {
+                        script += `
+        baseCircle${index} = baseSketch${index}.sketchCurves.sketchCircles.addByCenterRadius(
+            adsk.core.Point3D.create(${centerX}, ${centerY}, 0), ${baseWidth/2}
+        )`;
+                    } else {
+                        script += `
+        baseRect${index} = baseSketch${index}.sketchCurves.sketchLines.addTwoPointRectangle(
+            adsk.core.Point3D.create(${centerX - baseWidth/2}, ${centerY - baseLength/2}, 0),
+            adsk.core.Point3D.create(${centerX + baseWidth/2}, ${centerY + baseLength/2}, 0)
+        )`;
+                    }
+                    
+                    script += `
+        baseProf${index} = baseSketch${index}.profiles.item(0)
+        baseExtInput${index} = extrudes.createInput(baseProf${index}, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+        baseExtInput${index}.setDistanceExtent(False, adsk.core.ValueInput.createByReal(${baseHeight}))
+        baseExtInput${index}.startExtent = adsk.fusion.OffsetStartDefinition.create(adsk.core.ValueInput.createByReal(${layerInfo.bottomY/10}))
+        extrudes.add(baseExtInput${index})`;
+                }
+            });
+
+            script += `
+        
+        ui = app.userInterface
+        ui.messageBox('Organizer created! Export as STEP: File > Export > choose STEP format')
+        
+    except:
+        ui = app.userInterface
+        ui.messageBox('Error: {}'.format(traceback.format_exc()))`;
+
+            downloadFile(script, 'fusion360_organizer.py', 'text/plain');
+            alert('Fusion 360 Python script exported! Run this in Fusion 360 (Scripts & Add-ins > Scripts > Run), then export as STEP file.');
+        }
+        
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
